@@ -69,16 +69,32 @@ std::string from_jstring(JSContextRef ctx, JSValueRef val) {
     return str;
 }
 
+std::string format_stack_trace(JSContextRef ctx, JSValueRef err) {
+    auto stack = from_jstring(ctx, err);
+    auto vec = sl::utils::split(stack, '\n');
+    auto res = std::string();
+    for (size_t i = 0; i < vec.size(); i++) {
+        auto& line = vec.at(i);
+        if (i > 1) {
+            res += "    at ";
+        }
+        res += line;
+        if (i < vec.size() - 1) {
+            res += "\n";
+        }
+    }
+    return res;
+}
+
 std::string eval_js(JSContextRef ctx, const std::string& code, const std::string& path) {
     //std::cout << code << std::endl;
-    auto ecode = std::string() + "try {" + code + "} catch(e) { print(e.message); }";
-    JSStringRef jcode = JSStringCreateWithUTF8CString(ecode.c_str());
+    //auto ecode = std::string() + "try {" + code + "} catch(e) { print(e.message); }";
+    JSStringRef jcode = JSStringCreateWithUTF8CString(code.c_str());
     JSStringRef jpath = JSStringCreateWithUTF8CString(path.c_str());
     JSValueRef err = nullptr;
     auto res = JSEvaluateScript(ctx, jcode, nullptr, jpath, 1, std::addressof(err));
     if (nullptr == res) {
-        throw support::exception(TRACEMSG(//from_jstring(ctx, err) +
-                "\nJSC engine eval error"));
+        throw support::exception(TRACEMSG(format_stack_trace(ctx, err)));
     }
     if (JSValueIsString(ctx, res)) {
         return from_jstring(ctx, res);
