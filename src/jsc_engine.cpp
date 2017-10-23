@@ -6,11 +6,8 @@
  */
 #include "jsc_engine.hpp"
 
-// todo: removeme
-#include <iostream>
-// todo: endremoveme
-
 #include <cstring>
+#include <cstdio>
 #include <functional>
 #include <memory>
 
@@ -32,24 +29,6 @@ namespace wilton {
 namespace jsc {
 
 namespace { // anonymous
-
-class ctxgroup_deleter {
-public:
-    void operator()(JSContextGroupRef ctx) {
-        if (nullptr != ctx) {
-            JSContextGroupRelease(ctx);
-        }
-    }
-};
-
-class ctx_deleter {
-public:
-    void operator()(JSGlobalContextRef ctx) {
-        if (nullptr != ctx) {
-            JSGlobalContextRelease(ctx);
-        }
-    }
-};
 
 void register_c_func(JSGlobalContextRef ctx, const std::string& name, JSObjectCallAsFunctionCallback cb) {
     JSObjectRef global = JSContextGetGlobalObject(ctx);
@@ -87,8 +66,6 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) {
 }
 
 std::string eval_js(JSContextRef ctx, const std::string& code, const std::string& path) {
-    //std::cout << code << std::endl;
-    //auto ecode = std::string() + "try {" + code + "} catch(e) { print(e.message); }";
     JSStringRef jcode = JSStringCreateWithUTF8CString(code.c_str());
     JSStringRef jpath = JSStringCreateWithUTF8CString(path.c_str());
     JSValueRef err = nullptr;
@@ -113,10 +90,10 @@ JSValueRef print_func(JSContextRef ctx, JSObjectRef function,
     (void) thiz;
     (void) exception;
     if (args_count > 0) {
-        auto val = string_from_arg(ctx, arguments, 0);
-        std::cout << val << std::endl;
+        auto val = from_jstring(ctx, arguments[0]);
+        puts(val.c_str());
     } else {
-        std::cout << std::endl;
+        puts("");
     }
     return JSValueMakeUndefined(ctx);
 }
@@ -198,8 +175,16 @@ class jsc_engine::impl : public sl::pimpl::object::impl {
     JSContextGroupRef ctxgroup;
     JSGlobalContextRef ctx;
 
-    
 public:
+    ~impl() STATICLIB_NOEXCEPT {
+        if (nullptr != ctx) {
+            JSGlobalContextRelease(ctx);
+        }
+        if (nullptr != ctxgroup) {
+            JSContextGroupRelease(ctxgroup);
+        }
+    }
+    
     impl(sl::io::span<const char> init_code) :
     ctxgroup(JSContextGroupCreate()),
     ctx(JSGlobalContextCreateInGroup(ctxgroup, nullptr)) {
