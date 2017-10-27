@@ -64,7 +64,8 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     auto res = std::string();
     for (size_t i = 0; i < vec.size(); i++) {
         auto& line = vec.at(i);
-        if (i > 1 && line.length() > 0 && !sl::utils::starts_with(line, prefix) && 'E' != line.front()) {
+        if (i > 1 && line.length() > 0 && !sl::utils::starts_with(line, prefix) && 
+                'E' != line.front() && '\'' != line.front()) {
             res += prefix;
         }
         res += line;
@@ -183,7 +184,7 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
     } else {
         auto msg = TRACEMSG(err + "\n'wiltoncall' error for name: [" + name + "]");
         wilton_free(err);
-        auto jmsg = JSStringCreateWithUTF8CString(out);
+        auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
         });

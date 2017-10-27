@@ -11,8 +11,14 @@ set ( ${PROJECT_NAME}_DEPS
         staticlib_io
         staticlib_utils
         staticlib_json
-        staticlib_pimpl
-        javascriptcoregtk-3.0 )
+        staticlib_pimpl )
+
+if ( WILTON_BUILD_FLAVOUR MATCHES "(wheezy|el7)" )
+    list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-3.0 )
+elseif ( WILTON_BUILD_FLAVOUR MATCHES "(fedora|xenial)")
+    list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-4.0 )
+endif ( )
+
 staticlib_pkg_check_modules ( ${PROJECT_NAME}_DEPS_PC REQUIRED ${PROJECT_NAME}_DEPS )
 
 # library
