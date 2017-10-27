@@ -65,7 +65,7 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     for (size_t i = 0; i < vec.size(); i++) {
         auto& line = vec.at(i);
         if (i > 1 && line.length() > 0 && !sl::utils::starts_with(line, prefix) && 
-                'E' != line.front() && '\'' != line.front()) {
+                line.find('@') != std::string::npos) {
             res += prefix;
         }
         res += line;
@@ -127,7 +127,8 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         }
         auto code_str = std::string(code, code_len);
         wilton_free(code);
-        eval_js(ctx, code_str, path);
+        auto path_short = support::script_engine_detail::shorten_script_path(path);
+        eval_js(ctx, code_str, path_short);
     } catch (const std::exception& e) {
         auto msg = TRACEMSG(e.what() + "\nError loading script, path: [" + path + "]");
         auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
