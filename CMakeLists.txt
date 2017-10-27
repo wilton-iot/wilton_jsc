@@ -29,6 +29,7 @@ add_library ( ${PROJECT_NAME} SHARED
 target_link_libraries ( ${PROJECT_NAME} PRIVATE
         wilton_core
         wilton_loader
+        wilton_logging
         ${${PROJECT_NAME}_DEPS_PC_LIBRARIES} )
 
 target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE 
@@ -36,6 +37,7 @@ target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/include
         ${WILTON_DIR}/core/include
         ${WILTON_DIR}/modules/wilton_loader/include
+        ${WILTON_DIR}/modules/wilton_logging/include
         ${${PROJECT_NAME}_DEPS_PC_INCLUDE_DIRS} )
         
 target_compile_options ( ${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPS_PC_CFLAGS_OTHER} )

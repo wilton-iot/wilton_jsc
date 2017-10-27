@@ -23,6 +23,7 @@
 #include "wilton/wilton_loader.h"
 
 #include "wilton/support/exception.hpp"
+#include "wilton/support/logging.hpp"
 
 namespace wilton {
 namespace jsc {
@@ -76,8 +77,8 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     return res;
 }
 
-std::string eval_js(JSContextRef ctx, const std::string& code, const std::string& path) {
-    JSStringRef jcode = JSStringCreateWithUTF8CString(code.c_str());
+std::string eval_js(JSContextRef ctx, const char* code, const std::string& path) {
+    JSStringRef jcode = JSStringCreateWithUTF8CString(code);
     auto deferred_jcode = sl::support::defer([jcode]() STATICLIB_NOEXCEPT {
         JSStringRelease(jcode);
     });
@@ -125,10 +126,14 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         if (nullptr != err_load) {
             support::throw_wilton_error(err_load, TRACEMSG(err_load));
         }
-        auto code_str = std::string(code, code_len);
-        wilton_free(code);
+        auto deferred = sl::support::defer([code] () STATICLIB_NOEXCEPT {
+            wilton_free(code);
+        });
         auto path_short = support::script_engine_detail::shorten_script_path(path);
-        eval_js(ctx, code_str, path_short);
+        wilton::support::log_debug("wilton.engine.jsc.eval",
+                "Evaluating source file, path: [" + path + "] ...");
+        eval_js(ctx, code, path_short);
+        wilton::support::log_debug("wilton.engine.jsc.eval", "Eval complete");
     } catch (const std::exception& e) {
         auto msg = TRACEMSG(e.what() + "\nError loading script, path: [" + path + "]");
         auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
@@ -168,9 +173,13 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
     auto input = jsval_to_string(ctx, arguments[1]);
     char* out = nullptr;
     int out_len = 0;
+    wilton::support::log_debug("wilton.wiltoncall." + name,
+            "Performing a call,  input length: [" + sl::support::to_string(input.length()) + "] ...");
     auto err = wiltoncall(name.c_str(), static_cast<int> (name.length()),
             input.c_str(), static_cast<int> (input.length()),
             std::addressof(out), std::addressof(out_len));
+    wilton::support::log_debug("wilton.wiltoncall." + name,
+            "Call complete, result: [" + (nullptr != err ? std::string(err) : "") + "]");
     if (nullptr == err) {
         if (nullptr != out) {
             auto jout = JSStringCreateWithUTF8CString(out);
@@ -198,9 +207,9 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
 } // namespace
 
 class jsc_engine::impl : public sl::pimpl::object::impl {
-    JSContextGroupRef ctxgroup;
-    JSGlobalContextRef ctx;
-    JSObjectRef wiltonRun;
+    JSContextGroupRef ctxgroup = nullptr;
+    JSGlobalContextRef ctx = nullptr;
+    JSObjectRef wiltonRun = nullptr;
 
 public:
     ~impl() STATICLIB_NOEXCEPT {
@@ -212,16 +221,20 @@ public:
         }
     }
     
-    impl(sl::io::span<const char> init_code) :
-    ctxgroup(JSContextGroupCreate()),
-    ctx(JSGlobalContextCreateInGroup(ctxgroup, nullptr)) {
+    impl(sl::io::span<const char> init_code) {
+        wilton::support::log_info("wilton.engine.jsc.init", "Initializing engine instance ...");
+        this->ctxgroup = JSContextGroupCreate();
+        this->ctx = JSGlobalContextCreateInGroup(ctxgroup, nullptr);
         register_c_func(ctx, "print", print_func);
         register_c_func(ctx, "WILTON_load", load_func);
         register_c_func(ctx, "WILTON_wiltoncall", wiltoncall_func);
         eval_js(ctx, init_code.data(), "wilton-require.js");
+        wilton::support::log_info("wilton.engine.jsc.init", "Engine initialization complete");
     }
 
     support::buffer run_callback_script(jsc_engine&, sl::io::span<const char> callback_script_json) {
+        wilton::support::log_debug("wilton.engine.jsc.run",
+                "Running callback script: [" + std::string(callback_script_json.data(), callback_script_json.size()) + "] ...");
         // extract wilton_run
         JSStringRef jname = JSStringCreateWithUTF8CString("WILTON_run");
         auto deferred_name = sl::support::defer([jname]() STATICLIB_NOEXCEPT {
@@ -247,6 +260,8 @@ public:
         JSValueRef jcb_val = JSValueMakeString(ctx, jcb);
         JSValueRef err = nullptr;
         JSValueRef res = JSObjectCallAsFunction(ctx, wilton_run, nullptr, 1, std::addressof(jcb_val), std::addressof(err));
+        wilton::support::log_debug("wilton.engine.jsc.run",
+                "Callback run complete, result: [" + sl::support::to_string_bool(nullptr != res) + "]");
         if (nullptr == res) {
             throw support::exception(TRACEMSG(format_stack_trace(ctx, err)));
         }
