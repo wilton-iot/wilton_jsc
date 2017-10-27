@@ -64,8 +64,8 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     auto res = std::string();
     for (size_t i = 0; i < vec.size(); i++) {
         auto& line = vec.at(i);
-        if (i > 1 && line.length() > 0 && !sl::utils::starts_with(line, prefix) && 
-                line.find('@') != std::string::npos) {
+        if (i > 1 && line.length() > 1 && !sl::utils::starts_with(line, prefix) && 
+                (line.find('@') != std::string::npos || '/' == line.front() || ':' == line.at(1))) {
             res += prefix;
         }
         res += line;
