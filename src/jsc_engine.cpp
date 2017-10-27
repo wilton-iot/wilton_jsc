@@ -189,7 +189,7 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
             wilton_free(out);
             return JSValueMakeString(ctx, jout);
         } else {
-            return JSValueMakeUndefined(ctx);
+            return JSValueMakeNull(ctx);
         }
     } else {
         auto msg = TRACEMSG(err + "\n'wiltoncall' error for name: [" + name + "]");
