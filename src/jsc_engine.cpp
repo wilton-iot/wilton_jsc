@@ -211,7 +211,6 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
 class jsc_engine::impl : public sl::pimpl::object::impl {
     JSContextGroupRef ctxgroup = nullptr;
     JSGlobalContextRef ctx = nullptr;
-    JSObjectRef wiltonRun = nullptr;
 
 public:
     ~impl() STATICLIB_NOEXCEPT {

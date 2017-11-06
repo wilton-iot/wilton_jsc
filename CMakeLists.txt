@@ -32,6 +32,12 @@ target_link_libraries ( ${PROJECT_NAME} PRIVATE
         wilton_logging
         ${${PROJECT_NAME}_DEPS_PC_LIBRARIES} )
 
+if ( STATICLIB_TOOLCHAIN MATCHES "macosx_.+" )
+    find_library ( ${PROJECT_NAME}_JSC JavaScriptCore )
+    target_link_libraries ( ${PROJECT_NAME} PRIVATE
+            ${${PROJECT_NAME}_JSC} )
+endif ( )
+
 target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE 
         ${CMAKE_CURRENT_LIST_DIR}/src
         ${CMAKE_CURRENT_LIST_DIR}/include
