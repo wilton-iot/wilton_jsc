@@ -16,27 +16,26 @@
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
 #include "wilton/support/registrar.hpp"
-#include "wilton/support/script_engine.hpp"
+#include "wilton/support/script_engine_map.hpp"
 
 #include "jsc_engine.hpp"
 
 namespace wilton {
 namespace jsc {
 
-std::shared_ptr<support::script_engine<jsc_engine>> static_engine() {
-    static std::shared_ptr<support::script_engine<jsc_engine>> engine = 
-            std::make_shared<support::script_engine<jsc_engine>>();
-    return engine;
+std::shared_ptr<support::script_engine_map<jsc_engine>> shared_tlmap() {
+    static auto tlmap = std::make_shared<support::script_engine_map<jsc_engine>>();
+    return tlmap;
 }
 
 support::buffer runscript(sl::io::span<const char> data) {
-    auto engine = static_engine();
-    return engine->run_script(data);
+    auto tlmap = shared_tlmap();
+    return tlmap->run_script(data);
 }
 
 void clean_tls(void*, const char* thread_id, int thread_id_len) {
-    auto engine = wilton::jsc::static_engine();
-    engine->clean_thread_local(thread_id, thread_id_len);
+    auto tlmap = shared_tlmap();
+    tlmap->clean_thread_local(thread_id, thread_id_len);
 }
 
 } // namespace

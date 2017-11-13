@@ -15,7 +15,7 @@
 
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
-#include "wilton/support/script_engine.hpp"
+#include "wilton/support/script_engine_map.hpp"
 
 namespace wilton {
 namespace jsc {
