@@ -131,7 +131,7 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         auto deferred = sl::support::defer([code] () STATICLIB_NOEXCEPT {
             wilton_free(code);
         });
-        auto path_short = support::script_engine_detail::shorten_script_path(path);
+        auto path_short = support::script_engine_map_detail::shorten_script_path(path);
         wilton::support::log_debug("wilton.engine.jsc.eval",
                 "Evaluating source file, path: [" + path + "] ...");
         eval_js(ctx, code, path_short);
