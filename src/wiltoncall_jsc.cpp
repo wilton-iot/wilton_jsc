@@ -11,7 +11,6 @@
 #include "staticlib/io.hpp"
 
 #include "wilton/wilton.h"
-#include "wilton/wilton_loader.h"
 
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
