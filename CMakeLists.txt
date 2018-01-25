@@ -13,9 +13,9 @@ set ( ${PROJECT_NAME}_DEPS
         staticlib_json
         staticlib_pimpl )
 
-if ( WILTON_BUILD_FLAVOUR MATCHES "(wheezy|el7)" )
+if ( WILTON_BUILD_FLAVOUR MATCHES "(wheezy)" )
     list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-3.0 )
-elseif ( WILTON_BUILD_FLAVOUR MATCHES "(fedora|xenial)")
+elseif ( WILTON_BUILD_FLAVOUR MATCHES "(fedora|xenial|el7)")
     list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-4.0 )
 endif ( )
 
