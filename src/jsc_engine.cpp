@@ -42,7 +42,7 @@ void register_c_func(JSGlobalContextRef ctx, const std::string& name, JSObjectCa
 
 std::string jsval_to_string(JSContextRef ctx, JSValueRef val) STATICLIB_NOEXCEPT {
     JSStringRef jstr = JSValueToStringCopy(ctx, val, nullptr);
-    if (nullptr ==jstr) {
+    if (nullptr == jstr) {
         return "";
     }
     auto deferred = sl::support::defer([jstr]() STATICLIB_NOEXCEPT {
@@ -52,7 +52,7 @@ std::string jsval_to_string(JSContextRef ctx, JSValueRef val) STATICLIB_NOEXCEPT
     auto str = std::string();
     str.resize(maxlen);
     size_t len = JSStringGetUTF8CString(jstr, std::addressof(str.front()), str.length());
-    if(len > 0) {
+    if (len > 0) {
         str.resize(len - 1);
     }
     return str;
@@ -65,17 +65,18 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     auto res = std::string();
     for (size_t i = 0; i < vec.size(); i++) {
         auto& line = vec.at(i);
-        if(line.length() > 1 && !(std::string::npos != line.find("@/wilton-requirejs/require.js:")) &&
+        if (line.length() > 1 && !(std::string::npos != line.find("@wilton-requirejs/require.js:")) &&
                 !(std::string::npos != line.find("@wilton-require.js:"))) {
-            if (i > 1 && !sl::utils::starts_with(line, prefix) && 
+            if (i > 1 && !sl::utils::starts_with(line, prefix) &&
                     (line.find('@') != std::string::npos || '/' == line.front() || ':' == line.at(1))) {
                 res += prefix;
             }
             res += line;
-            if (i < vec.size() - 1) {
-                res += "\n";
-            }
+            res.push_back('\n');
         }
+    }
+    if (res.length() > 0 && '\n' == res.back()) {
+        res.pop_back();
     }
     return res;
 }
@@ -138,7 +139,7 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         eval_js(ctx, code, path_short);
         wilton::support::log_debug("wilton.engine.jsc.eval", "Eval complete");
     } catch (const std::exception& e) {
-        auto msg = TRACEMSG(e.what() + "\nError loading script, path: [" + path + "]");
+        auto msg = TRACEMSG(e.what() + "\nError(e) loading script, path: [" + path + "]");
         auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
@@ -147,7 +148,7 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         *exception = JSObjectMakeError(ctx, 1, std::addressof(jmsg_ref), nullptr);
         return JSValueMakeUndefined(ctx);
     } catch (...) {
-        auto msg = TRACEMSG("Error loading script, path: [" + path + "]");
+        auto msg = TRACEMSG("Error(...) loading script, path: [" + path + "]");
         auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
@@ -214,6 +215,7 @@ class jsc_engine::impl : public sl::pimpl::object::impl {
     JSGlobalContextRef ctx = nullptr;
 
 public:
+
     ~impl() STATICLIB_NOEXCEPT {
         if (nullptr != ctx) {
             JSGlobalContextRelease(ctx);
@@ -222,7 +224,7 @@ public:
             JSContextGroupRelease(ctxgroup);
         }
     }
-    
+
     impl(sl::io::span<const char> init_code) {
         wilton::support::log_info("wilton.engine.jsc.init", "Initializing engine instance ...");
         this->ctxgroup = JSContextGroupCreate();
