@@ -194,7 +194,7 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
     char* out = nullptr;
     int out_len = 0;
     wilton::support::log_debug("wilton.wiltoncall." + name,
-            "Performing a call,  input length: [" + sl::support::to_string(input.length()) + "] ...");
+            "Performing a call, input length: [" + sl::support::to_string(input.length()) + "] ...");
     auto err = wiltoncall(name.c_str(), static_cast<int> (name.length()),
             input.c_str(), static_cast<int> (input.length()),
             std::addressof(out), std::addressof(out_len));
