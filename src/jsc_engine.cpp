@@ -289,7 +289,7 @@ public:
             auto str = jsval_to_string(ctx, res);
             return support::make_string_buffer(str);
         }
-        return support::make_empty_buffer();
+        return support::make_null_buffer();
     }
 };
 
