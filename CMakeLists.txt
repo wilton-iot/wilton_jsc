@@ -61,6 +61,9 @@ target_include_directories ( ${PROJECT_NAME} BEFORE PRIVATE
         
 target_compile_options ( ${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_DEPS_PC_CFLAGS_OTHER} )
 
+# debuginfo
+staticlib_extract_debuginfo_shared ( ${PROJECT_NAME} )
+
 # pkg-config
 set ( ${PROJECT_NAME}_PC_CFLAGS "-I${CMAKE_CURRENT_LIST_DIR}/include" )
 set ( ${PROJECT_NAME}_PC_LIBS "-L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} -l${PROJECT_NAME}" )
