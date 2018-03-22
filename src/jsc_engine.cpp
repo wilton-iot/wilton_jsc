@@ -46,6 +46,8 @@ namespace jsc {
 
 namespace { // anonymous
 
+const std::string st_prefix = "    at ";
+
 void register_c_func(JSGlobalContextRef ctx, const std::string& name, JSObjectCallAsFunctionCallback cb) {
     JSObjectRef global = JSContextGetGlobalObject(ctx);
     JSStringRef jname = JSStringCreateWithUTF8CString(name.c_str());
@@ -75,7 +77,6 @@ std::string jsval_to_string(JSContextRef ctx, JSValueRef val) STATICLIB_NOEXCEPT
 }
 
 std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXCEPT {
-    static std::string prefix = "    at ";
     auto stack = jsval_to_string(ctx, err);
     auto vec = sl::utils::split(stack, '\n');
     auto res = std::string();
@@ -83,9 +84,9 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
         auto& line = vec.at(i);
         if (line.length() > 1 && !(std::string::npos != line.find("@wilton-requirejs/require.js:")) &&
                 !(std::string::npos != line.find("@wilton-require.js:"))) {
-            if (i > 1 && !sl::utils::starts_with(line, prefix) &&
+            if (i > 1 && !sl::utils::starts_with(line, st_prefix) &&
                     (line.find('@') != std::string::npos || '/' == line.front() || ':' == line.at(1))) {
-                res += prefix;
+                res += st_prefix;
             }
             res += line;
             res.push_back('\n');

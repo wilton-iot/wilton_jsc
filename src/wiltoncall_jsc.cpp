@@ -38,6 +38,7 @@
 namespace wilton {
 namespace jsc {
 
+// initialized from wilton_module_init
 std::shared_ptr<support::script_engine_map<jsc_engine>> shared_tlmap() {
     static auto tlmap = std::make_shared<support::script_engine_map<jsc_engine>>();
     return tlmap;
@@ -58,6 +59,7 @@ void clean_tls(void*, const char* thread_id, int thread_id_len) {
 
 extern "C" char* wilton_module_init() {
     try {
+        wilton::jsc::shared_tlmap();
         auto err = wilton_register_tls_cleaner(nullptr, wilton::jsc::clean_tls);
         if (nullptr != err) wilton::support::throw_wilton_error(err, TRACEMSG(err));
         wilton::support::register_wiltoncall("runscript_jsc", wilton::jsc::runscript);
