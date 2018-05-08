@@ -26,6 +26,7 @@
 #include <functional>
 #include <memory>
 
+#include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
 
@@ -292,10 +293,17 @@ public:
         }
         return support::make_null_buffer();
     }
+
+    void run_garbage_collector(jsc_engine&) {
+        if (nullptr != ctx) {
+            JSGarbageCollect(ctx);
+        }
+    }
 };
 
 PIMPL_FORWARD_CONSTRUCTOR(jsc_engine, (sl::io::span<const char>), (), support::exception)
 PIMPL_FORWARD_METHOD(jsc_engine, support::buffer, run_callback_script, (sl::io::span<const char>), (), support::exception)
+PIMPL_FORWARD_METHOD(jsc_engine, void, run_garbage_collector, (), (), support::exception)
 
 } // namespace
 }
