@@ -26,9 +26,7 @@
 #include <functional>
 #include <memory>
 
-#include <JavaScriptCore/JSBase.h>
-#include <JavaScriptCore/JSContextRef.h>
-#include <JavaScriptCore/JSStringRef.h>
+#include <JavaScriptCore/JavaScript.h>
 
 #include "staticlib/io.hpp"
 #include "staticlib/json.hpp"
