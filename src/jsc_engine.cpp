@@ -81,8 +81,8 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     auto res = std::string();
     for (size_t i = 0; i < vec.size(); i++) {
         auto& line = vec.at(i);
-        if (line.length() > 1 && !(std::string::npos != line.find("@wilton-requirejs/require.js:")) &&
-                !(std::string::npos != line.find("@wilton-require.js:"))) {
+        if (line.length() > 1 && !(std::string::npos != line.find("wilton-requirejs/require.js:")) &&
+                !(std::string::npos != line.find("wilton-require.js:"))) {
             if (i > 1 && !sl::utils::starts_with(line, st_prefix) &&
                     (line.find('@') != std::string::npos || '/' == line.front() || ':' == line.at(1))) {
                 res += st_prefix;
@@ -132,12 +132,12 @@ JSValueRef print_func(JSContextRef ctx, JSObjectRef /* function */,
 JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         JSObjectRef /* thiz */, size_t args_count, const JSValueRef arguments[],
         JSValueRef* exception) STATICLIB_NOEXCEPT {
-    std::string path = "";
+    auto path = std::string();
     try {
         if (args_count < 1 || !JSValueIsString(ctx, arguments[0])) {
             throw support::exception(TRACEMSG("Invalid arguments specified"));
         }
-        auto path = jsval_to_string(ctx, arguments[0]);
+        path = jsval_to_string(ctx, arguments[0]);
         // load code
         char* code = nullptr;
         int code_len = 0;
@@ -155,7 +155,7 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         eval_js(ctx, code, path_short);
         wilton::support::log_debug("wilton.engine.jsc.eval", "Eval complete");
     } catch (const std::exception& e) {
-        auto msg = TRACEMSG(e.what() + "\nError(e) loading script, path: [" + path + "]");
+        auto msg = TRACEMSG(e.what() + "\nError loading script, path: [" + path + "]");
         auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);

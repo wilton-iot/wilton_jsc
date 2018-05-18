@@ -42,6 +42,8 @@ addons:
       - libudev-dev
       - libglib2.0-dev
       - libjavascriptcoregtk-3.0-dev
+      - libgtk-3-dev
+      - libwebkitgtk-3.0-dev
       - valgrind
 
 before_install:
@@ -57,10 +59,10 @@ install:
 before_script:
   - echo "Replacing repo to test PR"
   - set -e
-  - rm -r modules/wilton_jsc
-  - mv ../wilton_jsc modules/
+  - rm -r engines/wilton_jsc
+  - mv ../wilton_jsc engines/
   - set +e
-  - pushd modules/wilton_jsc
+  - pushd engines/wilton_jsc
   - git rev-parse HEAD
   - popd
 
