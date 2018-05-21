@@ -18,13 +18,15 @@ cmake_minimum_required ( VERSION 2.8.12 )
 project ( wilton_jsc CXX )
 
 # dependencies
+staticlib_add_subdirectory ( ${STATICLIB_DEPS}/external_utf8cpp )
 set ( ${PROJECT_NAME}_DEPS
         staticlib_config
         staticlib_support
         staticlib_io
         staticlib_utils
         staticlib_json
-        staticlib_pimpl )
+        staticlib_pimpl
+        utf8cpp )
 
 if ( WILTON_BUILD_FLAVOUR MATCHES "(wheezy)" )
     list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-3.0 )

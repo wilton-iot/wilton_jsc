@@ -28,6 +28,8 @@
 
 #include <JavaScriptCore/JavaScript.h>
 
+#include "utf8.h"
+
 #include "staticlib/io.hpp"
 #include "staticlib/json.hpp"
 #include "staticlib/pimpl/forward_macros.hpp"
@@ -47,16 +49,6 @@ namespace { // anonymous
 
 const std::string st_prefix = "    at ";
 
-void register_c_func(JSGlobalContextRef ctx, const std::string& name, JSObjectCallAsFunctionCallback cb) {
-    JSObjectRef global = JSContextGetGlobalObject(ctx);
-    JSStringRef jname = JSStringCreateWithUTF8CString(name.c_str());
-    auto deferred = sl::support::defer([jname]() STATICLIB_NOEXCEPT {
-        JSStringRelease(jname);
-    });
-    JSObjectRef fun = JSObjectMakeFunctionWithCallback(ctx, jname, cb);
-    JSObjectSetProperty(ctx, global, jname, fun, kJSPropertyAttributeNone, nullptr);
-}
-
 std::string jsval_to_string(JSContextRef ctx, JSValueRef val) STATICLIB_NOEXCEPT {
     JSStringRef jstr = JSValueToStringCopy(ctx, val, nullptr);
     if (nullptr == jstr) {
@@ -73,6 +65,26 @@ std::string jsval_to_string(JSContextRef ctx, JSValueRef val) STATICLIB_NOEXCEPT
         str.resize(len - 1);
     }
     return str;
+}
+
+JSStringRef string_to_jsval(const char* str, size_t str_len) {
+    auto uvec = std::vector<uint16_t>();
+    utf8::utf8to16(str, str + str_len, std::back_inserter(uvec));
+    return JSStringCreateWithCharacters(reinterpret_cast<const JSChar*>(uvec.data()), uvec.size());
+}
+
+JSStringRef string_to_jsval(const std::string& str) {
+    return string_to_jsval(str.data(), str.length());
+}
+
+void register_c_func(JSGlobalContextRef ctx, const std::string& name, JSObjectCallAsFunctionCallback cb) {
+    JSObjectRef global = JSContextGetGlobalObject(ctx);
+    JSStringRef jname = string_to_jsval(name.c_str());
+    auto deferred = sl::support::defer([jname]() STATICLIB_NOEXCEPT {
+        JSStringRelease(jname);
+    });
+    JSObjectRef fun = JSObjectMakeFunctionWithCallback(ctx, jname, cb);
+    JSObjectSetProperty(ctx, global, jname, fun, kJSPropertyAttributeNone, nullptr);
 }
 
 std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXCEPT {
@@ -97,12 +109,12 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
     return res;
 }
 
-std::string eval_js(JSContextRef ctx, const char* code, const std::string& path) {
-    JSStringRef jcode = JSStringCreateWithUTF8CString(code);
+std::string eval_js(JSContextRef ctx, const char* code, size_t code_len, const std::string& path) {
+    JSStringRef jcode = string_to_jsval(code, code_len);
     auto deferred_jcode = sl::support::defer([jcode]() STATICLIB_NOEXCEPT {
         JSStringRelease(jcode);
     });
-    JSStringRef jpath = JSStringCreateWithUTF8CString(path.c_str());
+    JSStringRef jpath = string_to_jsval(path);
     auto deferred_jpath = sl::support::defer([jpath]() STATICLIB_NOEXCEPT {
         JSStringRelease(jpath);
     });
@@ -152,11 +164,11 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         auto path_short = support::script_engine_map_detail::shorten_script_path(path);
         wilton::support::log_debug("wilton.engine.jsc.eval",
                 "Evaluating source file, path: [" + path + "] ...");
-        eval_js(ctx, code, path_short);
+        eval_js(ctx, code, static_cast<size_t>(code_len), path_short);
         wilton::support::log_debug("wilton.engine.jsc.eval", "Eval complete");
     } catch (const std::exception& e) {
         auto msg = TRACEMSG(e.what() + "\nError loading script, path: [" + path + "]");
-        auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
+        auto jmsg = string_to_jsval(msg);
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
         });
@@ -165,7 +177,7 @@ JSValueRef load_func(JSContextRef ctx, JSObjectRef /* function */,
         return JSValueMakeUndefined(ctx);
     } catch (...) {
         auto msg = TRACEMSG("Error(...) loading script, path: [" + path + "]");
-        auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
+        auto jmsg = string_to_jsval(msg);
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
         });
@@ -181,7 +193,7 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
         JSValueRef* exception) STATICLIB_NOEXCEPT {
     if (args_count < 2 || !JSValueIsString(ctx, arguments[0]) || !JSValueIsString(ctx, arguments[1])) {
         auto msg = TRACEMSG("Invalid arguments specified");
-        auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
+        auto jmsg = string_to_jsval(msg);
         auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
         });
@@ -202,20 +214,24 @@ JSValueRef wiltoncall_func(JSContextRef ctx, JSObjectRef /* function */,
             "Call complete, result: [" + (nullptr != err ? std::string(err) : "") + "]");
     if (nullptr == err) {
         if (nullptr != out) {
-            auto jout = JSStringCreateWithUTF8CString(out);
-            auto deferred = sl::support::defer([jout]() STATICLIB_NOEXCEPT {
+            auto out_deferred = sl::support::defer([out]() STATICLIB_NOEXCEPT {
+                wilton_free(out);
+            });
+            auto jout = string_to_jsval(out, static_cast<size_t>(out_len));
+            auto jout_deferred = sl::support::defer([jout]() STATICLIB_NOEXCEPT {
                 JSStringRelease(jout);
             });
-            wilton_free(out);
             return JSValueMakeString(ctx, jout);
         } else {
             return JSValueMakeNull(ctx);
         }
     } else {
+        auto err_deferred = sl::support::defer([err]() STATICLIB_NOEXCEPT {
+            wilton_free(err);
+        });
         auto msg = TRACEMSG(err + "\n'wiltoncall' error for name: [" + name + "]");
-        wilton_free(err);
-        auto jmsg = JSStringCreateWithUTF8CString(msg.c_str());
-        auto deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
+        auto jmsg = string_to_jsval(msg);
+        auto jmsg_deferred = sl::support::defer([jmsg]() STATICLIB_NOEXCEPT {
             JSStringRelease(jmsg);
         });
         JSValueRef jmsg_ref = JSValueMakeString(ctx, jmsg);
@@ -233,22 +249,24 @@ class jsc_engine::impl : public sl::pimpl::object::impl {
 public:
 
     ~impl() STATICLIB_NOEXCEPT {
-        if (nullptr != ctx) {
-            JSGlobalContextRelease(ctx);
-        }
-        if (nullptr != ctxgroup) {
-            JSContextGroupRelease(ctxgroup);
-        }
+        JSGlobalContextRelease(ctx);
+        JSContextGroupRelease(ctxgroup);
     }
 
     impl(sl::io::span<const char> init_code) {
         wilton::support::log_info("wilton.engine.jsc.init", "Initializing engine instance ...");
         this->ctxgroup = JSContextGroupCreate();
+        if (nullptr == this->ctxgroup) {
+            throw support::exception(TRACEMSG("'JSContextGroupCreate' error"));
+        }
         this->ctx = JSGlobalContextCreateInGroup(ctxgroup, nullptr);
+        if (nullptr == this->ctx) {
+            throw support::exception(TRACEMSG("'JSGlobalContextCreateInGroup' error"));
+        }
         register_c_func(ctx, "print", print_func);
         register_c_func(ctx, "WILTON_load", load_func);
         register_c_func(ctx, "WILTON_wiltoncall", wiltoncall_func);
-        eval_js(ctx, init_code.data(), "wilton-require.js");
+        eval_js(ctx, init_code.data(), init_code.size(), "wilton-require.js");
         wilton::support::log_info("wilton.engine.jsc.init", "Engine initialization complete");
     }
 
@@ -256,7 +274,7 @@ public:
         wilton::support::log_debug("wilton.engine.jsc.run",
                 "Running callback script: [" + std::string(callback_script_json.data(), callback_script_json.size()) + "] ...");
         // extract wilton_run
-        JSStringRef jname = JSStringCreateWithUTF8CString("WILTON_run");
+        JSStringRef jname = string_to_jsval("WILTON_run");
         auto deferred_name = sl::support::defer([jname]() STATICLIB_NOEXCEPT {
             JSStringRelease(jname);
         });
@@ -273,7 +291,7 @@ public:
             throw support::exception(TRACEMSG("Error accessing 'WILTON_run' function: not a function"));
         }
         // call
-        JSStringRef jcb = JSStringCreateWithUTF8CString(callback_script_json.data());
+        JSStringRef jcb = string_to_jsval(callback_script_json.data(), callback_script_json.size());
         auto deferred_cb = sl::support::defer([jcb]() STATICLIB_NOEXCEPT {
             JSStringRelease(jcb);
         });
@@ -293,9 +311,7 @@ public:
     }
 
     void run_garbage_collector(jsc_engine&) {
-        if (nullptr != ctx) {
-            JSGarbageCollect(ctx);
-        }
+        JSGarbageCollect(ctx);
     }
 };
 
