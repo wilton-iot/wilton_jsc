@@ -27,6 +27,7 @@
 #include "staticlib/io.hpp"
 
 #include "wilton/wilton.h"
+#include "wilton/wilton_service.h"
 
 #include "wilton/support/buffer.hpp"
 #include "wilton/support/exception.hpp"
@@ -46,7 +47,11 @@ std::shared_ptr<support::script_engine_map<jsc_engine>> shared_tlmap() {
 
 support::buffer runscript(sl::io::span<const char> data) {
     auto tlmap = shared_tlmap();
-    return tlmap->run_script(data);
+    int id = 0;
+    wilton_service_start_call(data.begin(), data.size(), &id);
+    auto result = tlmap->run_script(data);
+    wilton_service_stop_call(result.begin(), result.size(), id);
+    return result;
 }
 
 support::buffer rungc(sl::io::span<const char>) {
