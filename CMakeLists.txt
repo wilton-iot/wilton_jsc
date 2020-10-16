@@ -30,7 +30,7 @@ set ( ${PROJECT_NAME}_DEPS
 
 if ( WILTON_BUILD_FLAVOUR MATCHES "(wheezy)" )
     list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-3.0 )
-elseif ( WILTON_BUILD_FLAVOUR MATCHES "(fedora|stretch|bionic|el7)")
+elseif ( WILTON_BUILD_FLAVOUR MATCHES "(fedora|stretch|bionic|el7|el8)")
     list ( APPEND ${PROJECT_NAME}_DEPS javascriptcoregtk-4.0 )
 endif ( )
 
