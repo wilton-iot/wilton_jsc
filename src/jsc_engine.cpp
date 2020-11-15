@@ -23,6 +23,7 @@
 #include "jsc_engine.hpp"
 
 #include <cstdio>
+#include <cctype>
 #include <functional>
 #include <memory>
 
@@ -96,7 +97,9 @@ std::string format_stack_trace(JSContextRef ctx, JSValueRef err) STATICLIB_NOEXC
         if (line.length() > 1 && !(std::string::npos != line.find("wilton-requirejs/require.js:")) &&
                 !(std::string::npos != line.find("wilton-require.js:"))) {
             if (i > 1 && !sl::utils::starts_with(line, st_prefix) &&
-                    (line.find('@') != std::string::npos || '/' == line.front() || ':' == line.at(1))) {
+                    (line.find('@') != std::string::npos ||
+                            (std::string::npos != line.find(".js:") &&
+                                    std::isdigit(line.at(line.length() - 1))))) {
                 res += st_prefix;
             }
             res += line;
